@@ -3,20 +3,16 @@ require "bitmap"
 require "print_mode"
 require "barcode"
 require "status"
+require "format"
+require "configuration"
 
 class A2Printer
 
-  DEFAULT_RESOLUTION = 7
   ESC_SEQUENCE = 27
-  CONTROL_PARAMETERS = 55
   LINE_FEED = 10
   CARRIAGE_RETURN = "\n"
   NOT_ALLOWED_CHAR = 0x13
-  UNDERLINES = {
-    none: 0,
-    normal: 1,
-    thick: 2
-  }
+
 
   MAXIMUM_WIDTH = 384
 
@@ -25,24 +21,21 @@ class A2Printer
     @print_mode = PrintMode.new @connection
     @barcode = Barcode.new @connection
     @status = Status.new @connection
+    @format = Format.new @connection   
   end
 
   def begin(heat_time)
-    reset()
-    set_control_parameters heat_time
-    modify_density(calculate_density_setting)
+    reset
+    configure_printer heat_time
   end
 
-  def reset
-    @status.reset   
+  def configure_printer heat_time
+    configuration = Configuration.new @connection
+    configuration.configure heat_time
   end
 
   def reset_formatting
-    online
-    normal
-    underline_off
-    justify(:left)
-    set_default_heights
+    @format.reset(@barcode, @status, @print_mode)
   end
 
   def feed(lines=1)
@@ -75,32 +68,19 @@ class A2Printer
   end
 
   def set_size(size)
-    bytes = {
-      small: 0,
-      medium: 10,
-      large: 25
-    }
-
-    write_bytes(29, 33, bytes[size], 10)
+    @format.size size
   end
 
   def underline_on(weight)
-    weight = sanitized_weight weight
-    write_bytes(ESC_SEQUENCE, 45, weight)
+    @format.underline_on weight
   end
 
   def underline_off
-    underline_on(UNDERLINES[:none])
+    @format.underline_off
   end
 
   def justify(position)
-    bytes = {
-      left: 0,
-      center: 1,
-      right: 2
-    }
-
-    write_bytes(0x1B, 0x61, bytes[position])
+    @format.justify position
   end
 
   def print_bitmap(*args)
@@ -125,6 +105,10 @@ class A2Printer
   def online
     @status.online
   end
+
+  def reset
+    @status.reset   
+  end
   
   def sleep
     @status.sleep_after 0
@@ -148,41 +132,6 @@ class A2Printer
     write(LINE_FEED)
   end
 
-  def set_default_heights
-    default_for_line = 32
-    set_line_height(default_for_line)
-
-    @barcode.default_height
-  end
-
-  def modify_density setting
-    write_bytes(18, 35)
-    write_bytes(setting)
-  end
-
-  def calculate_density_setting
-    density = 15
-    break_time = 15
-    (density << 4) | break_time
-  end
-
-  def set_heat_conditions heat_time
-    heat_time = 150 if heat_time.nil?
-    heat_interval = 50
-    write_bytes(heat_time)
-    write_bytes(heat_interval)
-  end
-
-  def set_default_resolution
-    write_bytes(DEFAULT_RESOLUTION)
-  end
-
-  def set_control_parameters heat_time
-    write_bytes(ESC_SEQUENCE, CONTROL_PARAMETERS)
-    set_default_resolution
-    set_heat_conditions heat_time
-  end
-
   def not_allowed? char
     char == NOT_ALLOWED_CHAR
   end
@@ -193,13 +142,6 @@ class A2Printer
 
   def normal
     @print_mode.normal
-  end
-
-  def sanitized_weight weight
-    result = weight
-    result = UNDERLINES[:none] if weight.nil?
-    result = UNDERLINES[:thick] if weight > UNDERLINES[:thick]
-    result
   end
 
   def obtain_bitmap *args

@@ -1,5 +1,6 @@
 class PrintMode
-
+  
+  ESC_SEQUENCE = 27
   INVERSE_MASK = (1 << 1)
   UPDOWN_MASK = (1 << 2)
   BOLD_MASK = (1 << 3)
