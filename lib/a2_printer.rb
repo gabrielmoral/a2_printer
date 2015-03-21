@@ -188,7 +188,7 @@ class A2Printer
   end
 
   def write_bytes(*bytes)
-    bytes.each { |b| @connection.putc(b) }
+    @connection.write_bytes *bytes
   end
 
   def normal
