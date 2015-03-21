@@ -34,7 +34,7 @@ class A2Printer
   end
 
   def reset
-    write_bytes(ESC_SEQUENCE, 64)
+    @status.reset   
   end
 
   def reset_formatting

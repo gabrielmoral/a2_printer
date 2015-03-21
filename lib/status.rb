@@ -21,5 +21,9 @@ class Status
   def wake
     @connection.write_bytes(255)  
   end
+
+  def reset    
+    @connection.write_bytes(ESC_SEQUENCE, 64)
+  end
   
 end
