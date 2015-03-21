@@ -2,6 +2,7 @@ require "serial_connection"
 require "bitmap"
 require "print_mode"
 require "barcode"
+require "status"
 
 class A2Printer
 
@@ -23,6 +24,7 @@ class A2Printer
     @connection = connection
     @print_mode = PrintMode.new @connection
     @barcode = Barcode.new @connection
+    @status = Status.new @connection
   end
 
   def begin(heat_time)
@@ -115,36 +117,25 @@ class A2Printer
   def print_barcode(text, type)
     @barcode.print text, type
   end
-
-  # Take the printer offline. Print commands sent after this will be
-  # ignored until `online` is called
+  
   def offline
-    write_bytes(ESC_SEQUENCE, 61, 0)
+    @status.offline
   end
-
-  # Take the printer back online. Subsequent print commands will be
-  # obeyed.
+  
   def online
-    write_bytes(ESC_SEQUENCE, 61, 1)
+    @status.online
   end
-
-  # Put the printer into a low-energy state immediately
+  
   def sleep
-    sleep_after(0)
+    @status.sleep_after 0
   end
-
-  # Put the printer into a low-energy state after the given number
-  # of seconds
+ 
   def sleep_after(seconds)
-    write_bytes(ESC_SEQUENCE, 56, seconds)
+    @status.sleep_after seconds
   end
 
-  # Wake the printer from a low-energy state. This command will wait
-  # for 50ms (as directed by the datasheet) before allowing further
-  # commands to be send.
   def wake
-    write_bytes(255)
-    # delay(50) # ?
+    @status.wake
   end
 
   def set_default
