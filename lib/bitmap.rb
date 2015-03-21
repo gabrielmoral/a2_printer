@@ -1,44 +1,49 @@
+require 'bitmap_size'
+
 class Bitmap
     attr_reader
 
-    def self.from_source source
+    def self.from_source connection, source
       data = obtain_data source
       width = obtain_width data
       height = obtain_heigth data
-      new(width, height, source)
+      new(connection, width, height, source)
     end
 
-    def initialize(width, height, source)
+    def initialize(connection, width, height, source)
         @data = Bitmap.obtain_data(source)
-        @width = width
-        @height = height
+        @bitmap_size = BitmapSize.new width, height
+        @connection = connection
     end
 
     def wider_than? width
-      @width > width
+      @bitmap_size.width > width
     end
 
-    def print connection
+    def print 
       row_start = 0
-      width_in_bytes = @width / 8
+      width_in_bytes = @bitmap_size.width_in_bytes
 
-      while row_start < @height do
-        
-        chunk_height = chunk_height row_start
-        bytes = (0...(width_in_bytes * chunk_height)).map { @data.getbyte }
-
-        connection.write_bytes(18, 42)
-        connection.write_bytes(chunk_height, width_in_bytes)
-        connection.write_bytes(*bytes)
+      while row_start < @bitmap_size.height do
+        print_chunk_of_bitmap row_start, width_in_bytes
         row_start += 255
       end
     end
 
-    private  
+    private 
 
-    def chunk_height row_start
-      ((@height - row_start) > 255) ? 255 : (@height - row_start)
-    end  
+    def print_chunk_of_bitmap row_start, width_in_bytes
+      chunk_height = @bitmap_size.chunk_height row_start     
+      write_chunk_of_bitmap chunk_height, width_in_bytes
+    end
+
+    def write_chunk_of_bitmap chunk_height, width_in_bytes
+      bytes = (0...(width_in_bytes * chunk_height)).map { @data.getbyte }
+
+      @connection.write_bytes(18, 42)
+      @connection.write_bytes(chunk_height, width_in_bytes)
+      @connection.write_bytes(*bytes)
+    end
 
     def self.obtain_data source
       if source.respond_to?(:getbyte)
