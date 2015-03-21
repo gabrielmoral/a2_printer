@@ -19,14 +19,14 @@ class Barcode
   end
 
   def default_height
-    height DEFAULT_HEIGHT
+    set_barcode_height DEFAULT_HEIGHT
   end
 
-  def height value  
+  def set_barcode_height value  
     @connection.write_bytes(29, 104, value)
   end
 
-  def print text, type
+  def print_barcode text, type
     @connection.write_bytes(29, 107, type) 
     @connection.write_bytes(text.bytes)
     @connection.write_bytes(0)

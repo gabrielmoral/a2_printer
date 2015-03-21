@@ -13,7 +13,6 @@ class A2Printer
   CARRIAGE_RETURN = "\n"
   NOT_ALLOWED_CHAR = 0x13
 
-
   MAXIMUM_WIDTH = 384
 
   def initialize(connection)
@@ -22,6 +21,8 @@ class A2Printer
     @barcode = Barcode.new @connection
     @status = Status.new @connection
     @format = Format.new @connection   
+    
+    @collaborators = [@print_mode, @barcode, @status, @format]
   end
 
   def begin(heat_time)
@@ -32,11 +33,7 @@ class A2Printer
   def configure_printer heat_time
     configuration = Configuration.new @connection
     configuration.configure heat_time
-  end
-
-  def reset_formatting
-    @format.reset(@barcode, @status, @print_mode)
-  end
+  end 
 
   def feed(lines=1)
     lines.times { line_feed }
@@ -67,63 +64,15 @@ class A2Printer
     write_bytes(char)
   end
 
-  def set_size(size)
-    @format.size size
-  end
-
-  def underline_on(weight)
-    @format.underline_on weight
-  end
-
-  def underline_off
-    @format.underline_off
-  end
-
-  def justify(position)
-    @format.justify position
-  end
-
   def print_bitmap(*args)
     bitmap = obtain_bitmap *args
 
     return if bitmap.wider_than? MAXIMUM_WIDTH
     bitmap.print
-  end
-
-  def set_barcode_height(val)
-    @barcode.height val  
-  end
-
-  def print_barcode(text, type)
-    @barcode.print text, type
-  end
-  
-  def offline
-    @status.offline
-  end
-  
-  def online
-    @status.online
-  end
-
-  def reset
-    @status.reset   
-  end
-  
-  def sleep
-    @status.sleep_after 0
-  end
- 
-  def sleep_after(seconds)
-    @status.sleep_after seconds
-  end
-
-  def wake
-    @status.wake
-  end
-
+  end 
+   
   def set_default
-    reset_formatting
+    reset_formatting @barcode, @status, @print_mode
   end
 
   private
@@ -140,10 +89,6 @@ class A2Printer
     @connection.write_bytes *bytes
   end
 
-  def normal
-    @print_mode.normal
-  end
-
   def obtain_bitmap *args
     only_source_provided = (args.size == 1)
 
@@ -155,4 +100,18 @@ class A2Printer
     end
     bitmap
   end
+
+   def method_missing sym, *args, &block
+    method_is_called = false
+
+    @collaborators.each { |collaborator| 
+      if(collaborator.respond_to?(sym)) 
+        collaborator.send(sym, *args, &block) 
+        method_is_called = true    
+        break
+      end
+    }
+    raise NoMethodError.new("undefined method") unless method_is_called
+  end
+
 end

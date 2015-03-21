@@ -11,7 +11,7 @@ class Format
     @connection = connection
   end
 
-  def size(size)
+  def set_size(size)
     bytes = {
       small: 0,
       medium: 10,
@@ -40,7 +40,7 @@ class Format
     @connection.write_bytes(0x1B, 0x61, bytes[position])
   end
 
-  def reset barcode, status, print_mode
+  def reset_formatting barcode, status, print_mode
     status.online
     print_mode.normal
     underline_off

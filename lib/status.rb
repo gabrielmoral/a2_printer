@@ -14,6 +14,10 @@ class Status
     @connection.write_bytes(ESC_SEQUENCE, 61, 1)
   end
  
+  def sleep
+    sleep_after 0
+  end
+
   def sleep_after(seconds)
     @connection.write_bytes(ESC_SEQUENCE, 56, seconds)
   end
